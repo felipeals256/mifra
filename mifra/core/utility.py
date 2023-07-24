@@ -1,4 +1,42 @@
+from mifra.raw import Raw
+def get_table(query,**kwargs):
+	#Aquí solo validamos que no haya ingresado id
+	#Si no lo ha ingresado se agrega a la query
+	tabla = str(query)[str(query).upper().find(" FROM "):].replace("'","").replace('"',"").replace("from","").replace("FROM","").strip()[:str(query)[str(query).upper().find(" FROM "):].replace("'","").replace('"',"").replace("from","").replace("FROM","").strip().find(" ")]
+	
+	_from = query[query.upper().rfind("FROM")+4:].strip().replace("  "," ")
 
+	tabla = _from.split(" ")[0]
+	_tabla =_from.replace(tabla,"").strip().split(" ")[0].upper() 
+
+
+	if len(_tabla)>0 and _tabla != "ORDER" and _tabla != "GROUP" and _tabla != "WHERE":
+		tabla =_tabla
+		
+	return tabla
+
+
+def get_dictionary(query,con,**kwargs):
+
+	tabla=get_table(query)
+
+
+	query=query.replace("select","select "+tabla+".id as _id_dependencia,").replace("SELECT","SELECT "+tabla+".id,")
+
+	result = Raw.query(query,con=con)
+	dictionary={}
+	for res in result:
+		key="+"
+		for index, valor in res.items():
+			if index == '_id_dependencia':
+				continue
+			if key == "+":
+				key=str(valor)
+			else:
+				key+="+"+str(valor)
+		dictionary[key]=res['_id_dependencia']
+
+	return dictionary
 
 class Utility(object):
 
@@ -22,10 +60,10 @@ class Utility(object):
 
 			if i == 0 :
 				valores= valor
-				columnas = columna
+				columnas = "\""+columna+"\""
 			else:
 				valores= valores+", "+str(valor)
-				columnas = columnas+", "+columna
+				columnas = columnas+", \""+columna+"\""
 
 			i=i+1
 			valores,columnas = Utility.getValueAttr(datos,i,valores,columnas)
