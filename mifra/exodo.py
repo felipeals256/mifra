@@ -17,7 +17,7 @@ class QuerySet(object):
 		self.insert=insert
 		self.table_name=kwargs['table_name']
 		self.columns=eval("("+kwargs['columns']+")")
-		self.values=eval("("+kwargs['values'].replace("\n","").replace("true","True")+")")
+		self.values=eval("("+kwargs['values']..replace('\r\n', '').replace('\r', '').replace("\n","").replace("true","True")+")")
 		self._object=kwargs['object']
 
 
