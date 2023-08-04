@@ -114,7 +114,7 @@ class Core(object):
 
 			
 
-			if valor!=None and (tipo == "text" or tipo == "character varying" or tipo == "timestamp with time zone" or tipo == "varchar" or tipo=="date"):
+			if valor!=None and (tipo == "text" or tipo == "character varying" or "timestamp" in tipo or tipo == "varchar" or tipo=="date"):
 
 				if tipo=="date":
 					_fecha=valor
