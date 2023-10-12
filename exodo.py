@@ -1,4 +1,3 @@
-import settings
 from mifra.core.conexion import Conexion
 from mifra.core.core import Core
 import numpy as np
