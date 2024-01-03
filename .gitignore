@@ -49,6 +49,6 @@ Thumbs.db
 *.mov
 *.wmv
 
-
+/env
 __pycache__
 __init__.py
