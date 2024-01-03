@@ -1,4 +1,4 @@
-import settings
+
 from mifra.core.conexion import Conexion
 from mifra.core.core import Core
 import numpy as np
@@ -17,7 +17,7 @@ class QuerySet(object):
 		self.insert=insert
 		self.table_name=kwargs['table_name']
 		self.columns=eval("("+kwargs['columns']+")")
-		self.values=eval("("+kwargs['values'].replace('\r\n', '').replace('\r', '').replace("\n","").replace("true","True")+")")
+		self.values=eval("("+kwargs['values'].replace("\n","").replace("true","True")+")")
 		self._object=kwargs['object']
 
 
@@ -451,7 +451,7 @@ class Procesar(object):
 
 			
 			
-			if (tipo == "text" or tipo == "character varying" or "timestamp" in tipo or tipo == "varchar" or tipo=="date"):
+			if (tipo == "text" or tipo == "character varying" or tipo == "timestamp with time zone" or tipo == "varchar" or tipo=="date"):
 				valor="\'%{}%\'".format(columna_nombre)
 
 			#guarda el dato del objeto en el diccionario con el nombre de la columna
@@ -863,3 +863,4 @@ class Exodo(object):
 		conn.close()
 
 		objeto.exodo().insert(inserts)
+
