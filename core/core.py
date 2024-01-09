@@ -151,4 +151,3 @@ class Core(object):
 		return Core.validarAtributos(object)
 
 
-

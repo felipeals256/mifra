@@ -1,9 +1,10 @@
-
+import settings
 from mifra.core.conexion import Conexion
 from mifra.core.core import Core
 import numpy as np
 import pandas as pd
 import psycopg2
+import re
 
 class QuerySet(object):
 
@@ -14,11 +15,41 @@ class QuerySet(object):
 	_object   =None
 
 	def __init__(self,insert,**kwargs):
+
+		
+
+		# Función para agregar comillas dobles
+		def agregar_comillas(match):
+			return '"{}"'.format(match.group(1))
+
 		self.insert=insert
-		self.table_name=kwargs['table_name']
-		self.columns=eval("("+kwargs['columns']+")")
-		self.values=eval("("+kwargs['values'].replace("\n","").replace("true","True")+")")
-		self._object=kwargs['object']
+		if 'table_name' in kwargs:
+			self.table_name=kwargs['table_name']
+		else:
+			self.table_name = self.insert[:self.insert.find('(')].replace('INSERT','').replace('insert','').replace('INTO','').replace('into','').replace(" ","")
+
+		if 'columns' in kwargs:
+			self.columns=eval("("+kwargs['columns']+")")
+		else:
+			self.columns=self.insert[self.insert.find('('):self.insert.find(')')+1]
+			patron = r'(\w[\w\s]*)'
+			self.columns = eval(re.sub(patron, agregar_comillas, self.columns.replace('"',"")))
+
+		if 'values' in kwargs:
+			self.values=eval("("+kwargs['values'].replace("\n","").replace("true","True").replace("false","False")+")")
+		else:
+			self.values=eval(str(self.insert[self.insert.replace(" values "," VALUES ").find('VALUES')+6:].replace("\n","").replace("true","True").replace("false","False")).replace(";",""))
+
+		#if 'O\'\'SHEE' in self.values:
+		#	print("___________________________________________________________________________")
+		#	print(self.values)
+		#	print(self.get())
+		#	exit()
+
+		if 'values' in kwargs:
+			self._object=kwargs['object']
+		else:
+			self._object=None
 
 
 	def set(attr,value,**kwargs):
@@ -46,8 +77,12 @@ class QuerySet(object):
 		self.table_name=table_name
 
 	def get(self):
-		self.insert="INSERT INTO {table_name} {columnas} VALUES {values}".format(table_name=self.table_name,columnas=str(self.columns).replace("'","\""),values=str(self.values))
-		self.insert=self.insert.replace("'None'","NULL").replace("None","NULL")
+
+		patron = r'"([^"]*''[^"]*)"'
+		values = re.sub(patron, lambda m: "'" + m.group(1) + "'", str(self.values))
+
+		self.insert="INSERT INTO {table_name} {columnas} VALUES {values}".format(table_name=self.table_name,columnas=str(self.columns).replace("'","\""),values=str(values).replace("'now()'","now()").replace("'default'","default"))
+		self.insert=self.insert.replace("'None'","NULL").replace("None","NULL").replace(', True,',', true,').replace(', False,',', false,')
 		return self.insert
 
 
@@ -120,7 +155,10 @@ class Procesar(object):
 				if str(type(kwargs[kwarg][0])) == "<class 'function'>":
 					continue
 
-				dependencias[ kwargs[kwarg][1] ]={}
+				dependencia_name=kwargs[kwarg][1]
+				if str(type(dependencia_name)) == "<class 'function'>":
+					dependencia_name=dependencia_name.__name__+"()"
+				dependencias[ dependencia_name ]={}
 
 		
 				query = ""
@@ -170,7 +208,9 @@ class Procesar(object):
 						if key != "":
 							key+="+"
 						key+=str(row)
-					dependencias[ kwargs[kwarg][1] ][ str(key) ]=str(rows[0])
+
+
+					dependencias[ dependencia_name ][ str(key) ]=str(rows[0])
 
 		aux_cursor.close()
 		aux_conn.close()
@@ -206,7 +246,6 @@ class Procesar(object):
 			conf['exclude_if_not_exist']=tupl[2]['exclude_if_not_exist']
 
 		return conf
-
 
 
 	def format(self,**kwargs):
@@ -265,43 +304,57 @@ class Procesar(object):
 
 					#Configuraciones
 					conf = Procesar.get_config(kwargs[attr])
-				
-
-					if len(kwargs[attr])>=2 and str(type(kwargs[attr][0])) == "<class 'str'>" and str(type(kwargs[attr][1])) == "<class 'str'>":
+					
+					if len(kwargs[attr])>=2 and str(type(kwargs[attr][0])) == "<class 'str'>" and str(type(kwargs[attr][1])) == "<class 'str'>" \
+						or len(kwargs[attr])>=2 and str(type(kwargs[attr][0])) == "<class 'str'>" and str(type(kwargs[attr][1])) == "<class 'function'>":
 						"""
 							Para los casos de dependencias
 						"""
 
 						columna = kwargs[attr][1]
 
-						if "+" in columna:
-								_columnas = columna.replace(" ","").split('+')
-								valor_columna=""
-								for aux_culumna in _columnas:
-									if valor_columna != "":
-										valor_columna+="+"
+						if len(kwargs[attr])>=2 and str(type(kwargs[attr][0])) == "<class 'str'>" and str(type(kwargs[attr][1])) == "<class 'str'>":
+							
 
-									if not aux_culumna in encabezado:
-										print("No existe "+aux_culumna+" en la query de origen")
-										exit()
+							if "+" in columna:
+									_columnas = columna.replace(" ","").split('+')
+									valor_columna=""
+									for aux_culumna in _columnas:
+										if valor_columna != "":
+											valor_columna+="+"
 
-									if row[encabezado[aux_culumna]] == None:
-										valor_columna+=""
-									else:
-										valor_columna+=str(row[encabezado[aux_culumna ]])
-									
-						else:
+										if not aux_culumna in encabezado:
+											print("No existe "+aux_culumna+" en la query de origen")
+											exit()
 
-							if not columna in encabezado:
-								print("No existe "+columna+" en la query de origen")
-								exit()
+										if row[encabezado[aux_culumna]] == None:
+											valor_columna+=""
+										else:
+											valor_columna+=str(row[encabezado[aux_culumna ]])
+										
+							else:
 
-							valor_columna = str(row[encabezado[columna]])
-							#recibe una funcion para reestructurar el dato
-							if conf['restructure']!=None:
+								if not columna in encabezado:
+									print("No existe "+columna+" en la query de origen")
+									exit()
+
+								valor_columna = str(row[encabezado[columna]])
+								
+
+						if len(kwargs[attr])>=2 and str(type(kwargs[attr][0])) == "<class 'str'>" and str(type(kwargs[attr][1])) == "<class 'function'>":
+							data=Procesar.get_data_function(None,encabezado,row)
+							valor_columna = columna(data)
+							columna=kwargs[attr][1].__name__+"()"
+
+
+						#recibe una funcion para reestructurar el dato
+						if conf['restructure']!=None:
+							if str(type(kwargs[attr][1])) == "<class 'function'>":
+								data=Procesar.get_data_function(valor_columna,encabezado,row)		
+							else:
 								data=Procesar.get_data_function(row[encabezado[columna]],encabezado,row)
-								restructure = conf['restructure']
-								valor_columna=restructure(data)
+							restructure = conf['restructure']
+							valor_columna=restructure(data)
 
 
 						try:
@@ -315,7 +368,7 @@ class Procesar(object):
 								exclude=True
 							
 							elif conf['valid_exist'] == True or  conf['print_not_exist']==True:
-								error = "["+columna+"] No existe "+str(valor_columna)+" ("+columna+") en '"+kwargs[attr][0]+"'." 
+								error = "["+columna+"] No existe "+str(valor_columna)+" ("+str(columna)+") en '"+kwargs[attr][0]+"'." 
 								if conf['valid_exist'] == True:
 									error += " Si desea omitir esta validación y dejar NULL los id que no existen, agregue {'valid_exist':False} " 
 								if not error in valid_errors:
@@ -526,8 +579,12 @@ class Exodo(object):
 			iterator = kwargs['iterator']
 
 
-		conexion = Conexion(self.objeto)
-		conn = conexion.conn
+		if 'con' in kwargs:
+			conn = Conexion.getCon(kwargs['con'])
+		else:
+			conexion = Conexion(self.objeto)
+			conn = conexion.conn
+
 		cursor = conn.cursor()
 
 		i=0
@@ -863,4 +920,3 @@ class Exodo(object):
 		conn.close()
 
 		objeto.exodo().insert(inserts)
-

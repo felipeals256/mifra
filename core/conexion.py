@@ -1,6 +1,6 @@
 import psycopg2
 import pymssql
-
+import settings
 
 class Conexion():
 
@@ -86,70 +86,55 @@ class Conexion():
 
 	def get_db_conexion(objeto):
 
-		conect = None
-
+		port = 5432
 		try:
+			port =  settings.DB_PORT
+		except:
+			pass
 
-			import settings
-
-			port = 5432
-			try:
-				port =  settings.DB_PORT
-			except:
-				pass
-
-			conect={'server':settings.DB_HOST,
-				'user':settings.DB_USER,
-				'password':settings.DB_PASS,
-				'database':settings.DB_NAME,
-				'db_tipo':'postgres',
-				'port':port,
-				}
-
-		except Exception as e:
-
-			try:
-				con = getattr(objeto, 'Meta').db_conexion
-
-				if not 'server' in con:
-					print("ERROR: En la clase Meta del objeto debe agregar el host con el campo 'server'")
-					exit()
-				if not 'user' in con:
-					print("ERROR: En la clase Meta del objeto debe agregar el campo 'user'")
-					exit()
-				if not 'password' in con:
-					print("ERROR: En la clase Meta del objeto debe agregar la contraseña de la base de datos en el campo 'password'")
-					exit()
-				if not 'database' in con:
-					print("ERROR: En la clase Meta del objeto debe agregar el nombre de la base de datos en el campo 'database'")
-					exit()
-				if not 'db_tipo' in con:
-					print("ERROR: En la clase Meta del objeto debe agregar el tipo de conección con el campo 'db_conexion' que puede ser 'postgres' o 'sqlserver' ")
-					exit()
-
-				conect={}
-				conect['server']  =con['server']
-				conect['user']    =con['user']
-				conect['password']=con['password']
-				conect['database']=con['database']
-				conect['db_tipo'] =con['db_tipo']
-
-				if not 'port' in con:
-					if con['db_tipo']=="postgres":
-						conect['port']=5432
-					if con['db_tipo']=="sqlserver":
-						conect['port']=1433
-				else:
-					conect['port'] =con['port']
-			except:
-				pass
-
-		if not conect:
-			print("Mifra: No se pasaron los datos de conexion")
-			exit()
-
+		conect={'server':settings.DB_HOST,
+			'user':settings.DB_USER,
+			'password':settings.DB_PASS,
+			'database':settings.DB_NAME,
+			'db_tipo':'postgres',
+			'port':port,
+			}
 		
+		try:
+			con = getattr(objeto, 'Meta').db_conexion
 
+			if not 'server' in con:
+				print("ERROR: En la clase Meta del objeto debe agregar el host con el campo 'server'")
+				exit()
+			if not 'user' in con:
+				print("ERROR: En la clase Meta del objeto debe agregar el campo 'user'")
+				exit()
+			if not 'password' in con:
+				print("ERROR: En la clase Meta del objeto debe agregar la contraseña de la base de datos en el campo 'password'")
+				exit()
+			if not 'database' in con:
+				print("ERROR: En la clase Meta del objeto debe agregar el nombre de la base de datos en el campo 'database'")
+				exit()
+			if not 'db_tipo' in con:
+				print("ERROR: En la clase Meta del objeto debe agregar el tipo de conección con el campo 'db_conexion' que puede ser 'postgres' o 'sqlserver' ")
+				exit()
+
+			conect['server']  =con['server']
+			conect['user']    =con['user']
+			conect['password']=con['password']
+			conect['database']=con['database']
+			conect['db_tipo'] =con['db_tipo']
+
+			if not 'port' in con:
+				if con['db_tipo']=="postgres":
+					conect['port']=5432
+				if con['db_tipo']=="sqlserver":
+					conect['port']=1433
+			else:
+				conect['port'] =con['port']
+		except:
+			pass
+	
 		return conect
 
 	def getTipoConexion(objeto):

@@ -1,4 +1,4 @@
-
+import settings
 from mifra.core.conexion import Conexion
 from mifra.core.core import Core
 from mifra.core.utility import Utility
@@ -604,6 +604,5 @@ class Master(object):
 
 
 	
-
 
 
